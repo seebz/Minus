@@ -23,18 +23,18 @@ class Router
      * Défini une nouvelle route
      *
      * @see Route
-     * @param string $template
-     * @param array $params
-     * @return array
+     * @param string $path Path initial de la route
+     * @param string|array $to (optionnel) Correspondance de la route
+     * @param array $options (optionnel) Options de la route
+     * @return array La route
      */
-    public static function connect($template, array $params = array())
+    public static function connect($path, $to = null, $options = array())
     {
-        if ($template instanceof Route) {
-            static::$routes[] = $template;
+        if ($path instanceof Route) {
+            return static::$routes[] = $path;
         } else {
-            static::$routes[] = new Route(compact('template', 'params'));
+            return static::$routes[] = new Route($path, $to, $options);
         }
-        return static::$routes;
     }
 
     /**

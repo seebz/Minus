@@ -10,69 +10,185 @@ class Route
 {
 
     /**
-     * Patterns par défaut communs à toutes les routes
-     * 
-     * @var array
+     * Path initial de la route
+     *
+     * @see path()
+     * @var string
+     * @access protected
      */
-    public static $patterns = array(
-        'default'    => '[^/]+',
-        'lang'       => '[a-z]{2}',
-        'controller' => '[^/\.]+',
-        'action'     => '[^/\.]+',
-        'id'         => '[1-9][0-9]*',
-        'page'       => '[1-9][0-9]*',
-        'type'       => '[a-z]{2,4}',
+    protected $path;
+
+    /**
+     * Correspondance de la route
+     *
+     * @see to()
+     * @var array
+     * @access protected
+     */
+    protected $to;
+
+    /**
+     * Options de la route
+     *
+     * @see options()
+     * @var array
+     * @access protected
+     */
+    protected $options;
+
+    /**
+     * Pattern PCRE de la route
+     *
+     * @var string
+     * @access protected
+     */
+    protected $pattern;
+
+    /**
+     * Options par défaut des routes
+     *
+     * @var array
+     * @static
+     */
+    public static $defaults = array(
+        'constraints' => array(
+            'action'     => '[^/\.]+',
+            'controller' => '[^/\.]+',
+            'default'    => '.+',
+            'format'     => '[a-z]{3,4}',
+            'id'         => '[1-9][0-9]*',
+            'lang'       => '[a-z]{2}',
+            'module'     => '(?U).+', // (?U) = ungreedy
+            'page'       => '[1-9][0-9]*',
+        ),
+        'defaults' => array(
+            'format' => 'html',
+        ),
+        'format' => null, // null|true|false
     );
-
-    /**
-     * Template initial de la route
-     * 
-     * @var string
-     * @access protected
-     */
-    protected $template = '';
-
-    /**
-     * Pattern de la route
-     * 
-     * @var string
-     * @access protected
-     */
-    protected $pattern = '';
-
-    /**
-     * Paramètres de la route
-     * 
-     * @var array
-     * @access protected
-     */
-    protected $params = array();
-
-    /**
-     * Composants de la route sous la forme `nom` => `pattern`
-     * 
-     * @var array
-     * @access protected
-     */
-    protected $parts = array();
 
 
     /**
      * Constructeur de la classe
      *
-     * @param string $template Template initial de la route
-     * @param array $params Paramètres de la route
+     * @param string $path Path initial de la route
+     * @param string|array $to (optionnel) Correspondance de la route
+     * @param array $options (optionnel) Options de la route
      */
-    public function __construct($template, $params = array())
+    public function __construct($path, $to = null, $options = array())
     {
-        $this->template = $template;
-        $this->params = $params;
+        $this->path($path);
+        $this->to($to);
+        $this->options($options);
+
+        $this->compile();
     }
 
 
     /**
+     * Getter/Setter du `path` de la route
+     *
+     * @param $path string (optionnel) Le nouveau `path` de la route
+     * @return string Le `path` de la route
+     */
+    public function path($path = null)
+    {
+        if (! empty($path)) {
+            $this->path    = ltrim($path, '/');
+            $this->pattern = null;
+        }
+
+        $path = $this->path;
+
+        // Format
+        $format = $this->option('format');
+        if (is_null($format)) {
+            $path .= '(.:format)'; // optionnel
+        } elseif ($format) {
+            $path .= '.:format'; // obligatoire
+        } else {
+            // pas de format
+        }
+
+        return $path;
+    }
+
+    /**
+     * Getter/Setter de la correspondance de la route
+     *
+     * @param string|array $to (optionnel) La nouvelle correspondance
+     * @return array La correspondance de la route
+     */
+    public function to($to = null)
+    {
+        if (! is_null($to)) {
+            $this->to = $this->convertTo($to);
+        }
+
+        return (array) $this->to;
+    }
+
+    /**
+     * Getter/Setter des options de la route
+     *
+     * @param array $options (optionnel) Les nouvelles options
+     * @return array Les options de la route
+     */
+    public function options($options = null)
+    {
+        if (! empty($options)) {
+            foreach (static::$defaults as $k => $v) {
+                if (! array_key_exists($k, $options)) {
+                    $options[$k] = $v;
+                } elseif (is_array($v)) {
+                    $options[$k] += $v;
+                }
+            }
+            $this->options = $options;
+            $this->pattern = null;
+        }
+
+        return ($this->options ?: static::$defaults);
+    }
+
+    /**
+     * Getter d'une option de la route
+     *
+     * @param string $name Le nom de l'option à récupérer
+     * @param mixed $default (optionnel) Le valeur par défaut à retourner
+     *                       si l'option n'existe pas
+     * @return mixed La valeur de l'option ou par défaut
+     */
+    public function option($name, $default = null)
+    {
+        $options = $this->options();
+        return array_key_exists($name, $options) ? $options[$name] : $default;
+    }
+
+    /**
+     * Getter d'une contrainte (masque d'une variable de route)
+     *
+     * @param string $name Nom de la contrainte
+     * @return string Masque correspondant
+     */
+    public function constraint($name)
+    {
+        $constraints = (array) $this->option('constraints');
+        if (! empty($constraints[$name])) {
+            $constraint = $constraints[$name];
+        } else {
+            $constraint = $constraints['default'];
+        }
+
+        return $constraint;
+    }
+
+
+    /**
+     * Parse un chemin `path` et tente d'en déterminer la correspondance
+     *
      * @see Router\process()
-     * @param string $path
+     * @param string $path Le chemin à parser
      * @return array|false
      */
     public function parse($path)
@@ -80,87 +196,146 @@ class Route
         if (empty($this->pattern)) {
             $this->compile();
         }
+        $path = '/' . ltrim($path, '/');
+
         if (preg_match("`^{$this->pattern}$`", $path, $m)) {
-            $params = $this->params;
+            $rules = $this->option('defaults');
+
             foreach ($m as $key => $value) {
-                if (intval($key) === $key || in_array($value, array('', '/'))) {
-                    continue;
-                }
-                $params[$key] = $value;
+                if (is_numeric($key)) continue;
+                $rules[$key] = $value;
             }
-            return $params;
+            return array_filter($this->to() + $rules);
         }
+
         return false;
     }
 
+
     /**
+     * Traite les paramètres d'une route et tente d'en générer le `path`
+     *
      * @see Router\match()
-     * @param string $params
+     * @param array Les paramètres de la route à générer
      * @return string|false
      */
     public function match(array $params)
     {
-        if (empty($this->pattern)) {
-            $this->compile();
-        }
+        $url = $this->path();
 
-        $url = $this->template;
-
-        // On s'assure que les valeurs statiques correspondent
-        if (sizeof(array_intersect_assoc($params, $this->params)) !== sizeof($this->params)) {
+        // Correspondace des fragments statiques
+        if (array_intersect_assoc($params, $this->to) != $this->to) {
             return false;
         }
+        $params = array_diff_assoc($params, $this->to);
 
-        // Les valeurs restantes
-        $p = array_diff_assoc($params, $this->params);
-        foreach($p as $k => $v)
-        {
-            // Pattern
-            if (array_key_exists($k, $this->parts)
-                and preg_match("`^{$this->parts[$k]}$`", $v)
-            ) {
-                $url = preg_replace("`\{:{$k}(:[^\}+])?\}`", $v, $url);
-                unset($p[$k]);
-                continue;
+        // On ignore pour l'instant les valeurs par défaut
+        $defaults = $this->option('defaults');
+        $params = array_diff_assoc($params, $defaults);
+
+        // Traitement des fragments dynamiques
+        foreach ($params as $name => $value) {
+            if (strpos($url, ':' . $name) === false) {
+                return false; // fragment inconnu
             }
-            // Paramètre inconnu ou invalide
+            if (! preg_match('`^' . $this->constraint($name) . '$`', $value)) {
+                return false; // fragment invalide (format)
+            }
+            $url = str_replace(":{$name}", $value, $url);
+        }
+
+        // Fragments optionnels
+        $pattern = '`[(][^()]*:[a-z]+[^()]*[)]`';
+        while (preg_match($pattern, $url)) {
+            $url = preg_replace($pattern, '', $url);
+        }
+
+        // Valeurs par défaut
+        foreach ($defaults as $name => $value) {
+            $url = str_replace(":{$name}", $value, $url);
+        }
+
+        // Parenthèses restantes
+        $url = str_replace(array('(', ')'), '', $url);
+
+        // Derniers test
+        if (strpos($url, ':') !== false) {
             return false;
         }
 
-        // Tout a-t-il bien été traité ?
-        if (! empty($p) or strpos($url, '{:') !== false) {
-            return false;
-        }
-
-        return $url;
+        return '/' . ltrim($url, '/');
     }
 
 
     /**
-     * @ignore
+     * Compile le `path` de la route en pattern PCRE
+     *
+     * @see $pattern
      */
-    protected function compile()
+    public function compile()
     {
-        $this->pattern = $this->template;
-        $this->pattern = str_replace('.', '\.', $this->pattern);
+        $pattern = '/' . $this->path();
 
-        preg_match_all('`{:([^:}]+)}|{:([^}]+):([^}]+)}`', $this->pattern, $m);
+        // On protège les parenthèses
+        $pattern = str_replace('.', '$.$', $pattern);
+        $pattern = str_replace('(', '$($', $pattern);
+        $pattern = str_replace(')', '$)$', $pattern);
 
-        for ($i = 0; $i < count($m[0]); $i++) {
-            $n = !empty($m[1][$i]) ? $m[1][$i] : $m[2][$i];
-            if (!empty($m[3][$i])) {
-                $p = $m[3][$i];
-            } elseif (isset(static::$patterns[$n])) {
-                $p = static::$patterns[$n];
-            } elseif (isset(static::$patterns['default'])) {
-                $p = static::$patterns['default'];
-            } else {
-                $p = '[^/]+';
-            }
-            $this->parts[$n] = $p;
-
-            $this->pattern = str_replace($m[0][$i], "(?P<{$n}>{$p})", $this->pattern);
+        // Remplacement des variables par le masque correspondant
+        preg_match_all('`(:|\*)([^-$:\*/\(\)]+)`', $pattern, $m);
+        foreach ($m[0] as $key => $match) {
+            $name       = $m[2][$key];
+            $constraint = $this->constraint($name);
+            $replace    = "(?P<{$name}>{$constraint})";
+            $pattern    = str_replace($match, $replace, $pattern);
         }
+
+        // Les parenthèses sont des fragments optionnels
+        $pattern = str_replace('$.$', '\.',  $pattern);
+        $pattern = str_replace('$($', '(?:', $pattern);
+        $pattern = str_replace('$)$', ')?',  $pattern);
+
+        $this->pattern = $pattern;
+    }
+
+
+    protected function convertTo($to)
+    {
+        if (is_string($to)) {
+            $pattern = '`^'
+                . '(?:' . '(?P<module>.+)' . '[\/\\\\])?'
+                . '(?P<controller>[^#]+)'
+                . '(?:[#]' . '(?P<action>[^(]+)' . ')?'
+                . '(?:[(]' . '(?P<arguments>.+)?' . '[)])?'
+                . '$`';
+            if (preg_match($pattern, $to, $m)) {
+                $to = array();
+                foreach($m as $k => $v) {
+                    if (is_numeric($k) or empty($v)) {
+                        continue;
+                    }
+                    $to[$k] = $v;
+                }
+            }
+        }
+        $to = (array) $to;
+
+        if (! empty($to['arguments'])) {
+            if (is_string($to['arguments'])) {
+                $to['arguments'] = explode(',', $to['arguments']);
+            }
+            $to['arguments'] = array_map('trim', $to['arguments']);
+            $to['arguments'] = array_filter($to['arguments']);
+
+            if (sizeof($to['arguments']) === 1 and empty($to['id'])) {
+                $to['id'] = array_shift($to['arguments']);
+            }
+            if (empty($to['arguments'])) {
+                unset($to['arguments']);
+            }
+        }
+
+        return array_filter($to);
     }
 
 }
