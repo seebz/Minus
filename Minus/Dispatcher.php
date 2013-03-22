@@ -2,6 +2,9 @@
 
 namespace Minus;
 
+use \Minus\Exception;
+use \Minus\Router;
+
 
 /**
  * Dispatcher
@@ -19,15 +22,6 @@ class Dispatcher
     protected $request;
 
     /**
-     * L'objet `Controller` correspondant à la requête
-     * 
-     * @see Controller, controller()
-     * @var Controller
-     * @access protected
-     */
-    protected $controller;
-
-    /**
      * L'objet `Response` correspondant à la requête
      *
      * @see Response, response()
@@ -38,33 +32,16 @@ class Dispatcher
 
 
     /**
-     * Closure appelée avant d'exécuter le controller.
-     * Peut être un bon moment pour déterminer/charger le controller 
-     * correspondant à la requête client.
-     */
-    public $beforeRun;
-
-    /**
-     * Closure appelée après avoir exécuté le controller.
-     * Peut être un bon moment pour vérifier/remplacer la réponse.
-    */
-    public $afterRun;
-
-
-    /**
      * Constructeur de la classe
      *
-     * @param Request @request (optionnel) L'objet `Request`
-     * @param Controller @controller (optionnel) L'objet `Controller`
-     * @param Response @response (optionnel) L'objet `Response`
+     * @param Request $request (optionnel) L'objet `Request`
+     * @param Response $response (optionnel) L'objet `Response`
      */
     public function __construct(
         $request = null,
-        $controller = null,
         $response = null
     ) {
         $this->request($request);
-        $this->controller($controller);
         $this->response($response);
     }
 
@@ -82,21 +59,6 @@ class Dispatcher
             $this->request = $request;
         }
         return $this->request;
-    }
-
-    /**
-     * Getter/Setter de l'objet `Controller`
-     * 
-     * @see Controller, $controller
-     * @param Controller $controller (optionnel) Le nouvel objet `Controller`
-     * @return Controller
-     */
-    public function controller($controller = null)
-    {
-        if (! empty($controller)) {
-            $this->controller = $controller;
-        }
-        return $this->controller;
     }
 
     /**
@@ -118,25 +80,82 @@ class Dispatcher
      * Fonction principale du `Dispatcher`, elle est chargée d'exécuter le `Controller`
      * et de retourner la `Response` à envoyer au client.
      * 
+     * @param Request $request (optionnel) L'objet `Request`
+     * @param Response $response (optionnel) L'objet `Response`
      * @return Response
      */
-    public function run()
+    public function process($request = null, $response = null)
     {
-        // Before run
-        if (is_callable($this->beforeRun)) {
-            call_user_func($this->beforeRun, $this);
+        if (is_null($request)) {
+            $request = $this->request;
+        }
+        if (is_null($response)) {
+            $response = $this->response;
         }
 
-        if (is_callable(array($this->controller, 'run'))) {
-            $this->response = $this->controller->run();
+        // Route
+        if (! $params = Router::process($request->path())) {
+            throw new Exception('Route not found',
+                Exception::ROUTE_NOT_FOUND);
+        }
+        $request->params($params);
+
+        // Controller
+        $class = Inflector::camelize(
+            'app/controller/'
+            . (! empty($params['module']) ? $params['modume'] : '')
+            . '/' . $params['controller']
+        );
+        if (! class_exists($class)) {
+            throw new Exception(
+                'Controller not found',
+                Exception::CONTROLLER_NOT_FOUND
+            );
+        }
+        $controller = new $class($request, $response);
+
+        // Action
+        $action = Inflector::camelize($params['action'], false);
+        $method = array($controller, $action);
+        if (! is_callable($method)) {
+            throw new Exception(
+                'Action not found',
+                Exception::ACTION_NOT_FOUND
+            );
         }
 
-        // After run
-        if (is_callable($this->afterRun)) {
-            call_user_func($this->afterRun, $this);
+        // Arguments
+        if (! empty($params['id'])) {
+            $args = array($params['id']);
+        } elseif (! empty($params['arguments'])) {
+            $args = (array) $params['arguments'];
+        } else {
+            $args = array();
         }
 
-        return $this->response;
+        // Réponse
+        $ret = call_user_func_array($method, $args);
+        return $ret or $response;
+    }
+
+
+    public function loadRoutesFromConfig()
+    {
+        foreach (Config::get('routes', array()) as $path => $params) {
+            if (is_string($params)) {
+                $to = $params;
+                $options = array();
+            } elseif (array_key_exists('to', $params)) {
+                $to = $params['to'];
+                $options = $params;
+                unset($options['to']);
+            } else {
+                $to = null;
+                $options = $params;
+            }
+            Router::connect($path, $to, $options);
+        }
+        return $this;
     }
 
 }
