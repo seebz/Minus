@@ -137,6 +137,7 @@ class Inflector
         $term = str_replace(array('_', '/'), array(' ', "\t"), $term);
         $term = ucwords($term);
         $term = str_replace(array(' ', "\t"), array('', '\\'), $term);
+        $term = preg_replace('`[\\\\]+`', '\\', $term);
         if (! $ucfirst) {
             $term[0] = strtolower($term[0]);
         }
