@@ -30,7 +30,7 @@ class Config
      * @param string $file Nom de la configuration à charger
      * @return array|null
      */
-    public static function load($file)
+    public static function load($file, $default = null)
     {
         // On nous a fourni un nom de fichier correct
         if (file_exists($file) and is_readable($file)) {
@@ -43,16 +43,16 @@ class Config
             $src  = $path . '/' . $file;
 
             if (file_exists($src) and is_readable($src)) {
-                return static::loadFromFile($src);
+                return static::loadFromFile($src, $default);
             }
 
             $found = glob($src . '.*');
             if ($found and is_readable($found[0])) {
-                return static::loadFromFile($found[0]);
+                return static::loadFromFile($found[0], $default);
             }
         }
 
-        return static::$items[$file] = null;
+        return static::$items[$file] = $default;
     }
 
     /**
@@ -61,7 +61,7 @@ class Config
      * @param string $file Nom du fichier à charger
      * @return array|null|false
      */
-    public static function loadFromFile($file)
+    public static function loadFromFile($file, $default = null)
     {
         if (! file_exists($file) or ! is_readable($file)) {
             return false;
@@ -93,7 +93,7 @@ class Config
                 break;
 
             default:
-                $config = null;
+                $config = $default;
                 break;
         }
 
@@ -118,7 +118,7 @@ class Config
 
         // Le groupe existe-t-il ?
         if ($parts[0] and empty(static::$items[$parts[0]])) {
-            static::load($parts[0]);
+            static::load($parts[0], $default);
         }
 
         // On parcoure les éléments à la recherche de celui qui nous intérresse
