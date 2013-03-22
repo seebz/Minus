@@ -36,6 +36,15 @@ class Request
      */
     protected $query;
 
+    /**
+     * Paramètres provenant de la route
+     *
+     * @see params()
+     * @var array
+     * @access protected
+     */
+    protected $params;
+
 
     /**
      * Constructeur de la classe
@@ -43,10 +52,10 @@ class Request
      * @param string @method
      * @param string @path
      */
-    public function __construct($method, $path)
+    public function __construct($path, $method = 'GET')
     {
-        $this->method($method);
         $this->path($path);
+        $this->method($method);
     }
 
 
@@ -97,6 +106,35 @@ class Request
             $this->query = $query;
         }
         return $this->query;
+    }
+
+    /**
+     * Getter/Setter de l'attribut `$params`
+     * 
+     * @see $params
+     * @param array $params (optionnel) Les nouveaux paramètres
+     * @return array Valeur de l'attribut `$params`
+     */
+    public function params($params = null)
+    {
+        if (! empty($params)) {
+            $this->params = $params;
+        }
+        return (array) $this->params;
+    }
+
+    /**
+     * Getter d'un paramètre de la route
+     *
+     * @param string $name Le nom du paramètre à récupérer
+     * @param mixed $default (optionnel) Le valeur par défaut à retourner
+     *                       si le paramètre n'existe pas
+     * @return mixed La valeur du paramètre ou par défaut
+     */
+    public function param($name, $default = null)
+    {
+        $params = $this->params();
+        return array_key_exists($name, $params) ? $params[$name] : $default;
     }
 
 
