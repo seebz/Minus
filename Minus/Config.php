@@ -34,7 +34,7 @@ class Config
     {
         // On nous a fourni un nom de fichier correct
         if (file_exists($file) and is_readable($file)) {
-            return static::loadFromFile($file);
+            return static::loadFile($file);
         }
 
         // On recherche le fichier dans les différents `paths` définis
@@ -43,12 +43,12 @@ class Config
             $src  = $path . '/' . $file;
 
             if (file_exists($src) and is_readable($src)) {
-                return static::loadFromFile($src, $default);
+                return static::loadFile($src, $default);
             }
 
             $found = glob($src . '.*');
             if ($found and is_readable($found[0])) {
-                return static::loadFromFile($found[0], $default);
+                return static::loadFile($found[0], $default);
             }
         }
 
@@ -61,7 +61,7 @@ class Config
      * @param string $file Nom du fichier à charger
      * @return array|null|false
      */
-    public static function loadFromFile($file, $default = null)
+    public static function loadFile($file, $default = null)
     {
         if (! file_exists($file) or ! is_readable($file)) {
             return false;
