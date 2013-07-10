@@ -77,9 +77,38 @@ abstract class Controller
      * 
      * @return Response
      */
-    public function run()
+    public function run($action, array $args = array())
     {
+        if (! method_exists($this, $action)) {
+            throw new Exception(
+                'Action not found',
+                Exception::ACTION_NOT_FOUND
+            );
+        }
+
+        // Before
+        $this->before();
+
+        // Exécution de l'action
+        $return = call_user_func_array(array($this, $action), $args);
+        if (! empty($return)) {
+            $this->response = $return;
+        }
+
+        // After
+        $this->after();
+
+        // Response
+        if ( ! $this->response instanceof Response) {
+            $this->response = new Response($this->response);
+        }
+
         return $this->response;
     }
+
+
+    public function before() {}
+
+    public function after() {}
 
 }
