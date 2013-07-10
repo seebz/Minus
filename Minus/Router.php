@@ -50,6 +50,9 @@ class Router
     {
         $routes = static::$routes;
         foreach ($routes as $route) {
+            if ($route->parse($path)) {
+                return $route;
+            }
             if ($match = $route->parse($path)) {
                 return $match;
             }

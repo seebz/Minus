@@ -10,6 +10,30 @@ class Route
 {
 
     /**
+     * Options par défaut des routes
+     *
+     * @var array
+     * @static
+     */
+    public static $defaults = array(
+        'constraints' => array(
+            'action'     => '[^/\.]+',
+            'controller' => '[^/\.]+',
+            'default'    => '(?U).+', // (?U) = ungreedy
+            'format'     => '[a-z]{3,4}',
+            'id'         => '[1-9][0-9]*',
+            'lang'       => '[a-z]{2}',
+            'module'     => '(?U).+', // (?U) = ungreedy
+            'page'       => '[1-9][0-9]*',
+        ),
+        'defaults' => array(
+            'format' => 'html',
+        ),
+        'format' => null, // null|true|false
+    );
+
+
+    /**
      * Path initial de la route
      *
      * @see path()
@@ -45,27 +69,13 @@ class Route
     protected $pattern;
 
     /**
-     * Options par défaut des routes
+     * Paramètres de la route
      *
+     * @see params()
      * @var array
-     * @static
+     * @access protected
      */
-    public static $defaults = array(
-        'constraints' => array(
-            'action'     => '[^/\.]+',
-            'controller' => '[^/\.]+',
-            'default'    => '.+',
-            'format'     => '[a-z]{3,4}',
-            'id'         => '[1-9][0-9]*',
-            'lang'       => '[a-z]{2}',
-            'module'     => '(?U).+', // (?U) = ungreedy
-            'page'       => '[1-9][0-9]*',
-        ),
-        'defaults' => array(
-            'format' => 'html',
-        ),
-        'format' => null, // null|true|false
-    );
+    protected $params;
 
 
     /**
@@ -77,6 +87,10 @@ class Route
      */
     public function __construct($path, $to = null, $options = array())
     {
+        if ($to === null and array_key_exists('to', $options)) {
+            $to = $options['to'];
+        }
+
         $this->path($path);
         $this->to($to);
         $this->options($options);
@@ -183,6 +197,34 @@ class Route
         return $constraint;
     }
 
+    /**
+     * Getter/Setter des paramètres de la route
+     *
+     * @param array $options (optionnel) Les nouveaux paramètres
+     * @return array Les paramètres de la route
+     */
+    public function params($params = null)
+    {
+        if (! is_null($params)) {
+            $this->params = $params;
+        }
+        return (array) $this->params;
+    }
+
+    /**
+     * Getter d'un paramètre de la route
+     *
+     * @param string $name Le nom du paramètre à récupérer
+     * @param mixed $default (optionnel) Le valeur par défaut à retourner
+     *                       si le paramètre n'existe pas
+     * @return mixed La valeur du paramètre ou par défaut
+     */
+    public function param($name)
+    {
+        $params = $this->params();
+        return isset($params[$name]) ? $params[$name] : null;
+    }
+
 
     /**
      * Parse un chemin `path` et tente d'en déterminer la correspondance
@@ -202,10 +244,10 @@ class Route
             $rules = $this->option('defaults');
 
             foreach ($m as $key => $value) {
-                if (is_numeric($key)) continue;
+                if (is_numeric($key) or empty($value)) continue;
                 $rules[$key] = $value;
             }
-            return array_filter($this->to() + $rules);
+            return $this->params = $this->to() + $rules;
         }
 
         return false;
