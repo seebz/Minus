@@ -168,9 +168,9 @@ class Request
         // Controller
         $class = Inflector::camelize(
             'app/controller/'
-            . $this->param('module')
+            . $this->route->param('module')
             . '/'
-            . $this->param('controller')
+            . $this->route->param('controller')
         );
         if (! class_exists($class)) {
             throw new Exception(
@@ -181,7 +181,7 @@ class Request
         $controller = new $class($this);
 
         // Action
-        $action = Inflector::camelize($this->param('action'), false);
+        $action = Inflector::camelize($this->route->param('action'), false);
         if (! is_callable(array($controller, $action))) {
             throw new Exception(
                 "Action {$class}::{$action} not found",
@@ -191,9 +191,9 @@ class Request
 
         // Arguments
         if ($this->param('id')) {
-            $args = array($this->param('id'));
-        } elseif ($this->param('arguments')) {
-            $args = (array) $this->param('arguments');
+            $args = array($this->route->param('id'));
+        } elseif ($this->route->param('arguments')) {
+            $args = (array) $this->route->param('arguments');
         } else {
             $args = array();
         }
