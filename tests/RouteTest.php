@@ -1,7 +1,7 @@
 <?php
 
 require_once 'PHPUnit/Autoload.php';
-require_once dirname(__FILE__) . '/../Minus/Route.php';
+require_once dirname(__FILE__) . '/../src/Minus/Route.php';
 
 
 /**
