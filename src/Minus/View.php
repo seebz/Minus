@@ -161,9 +161,24 @@ class View
     }
 
 
+    public function __get($name)
+    {
+        return array_key_exists($name, $this->vars) ? $this->vars[$name] : null;
+    }
+
     public function __set($name, $value)
     {
         $this->vars[$name] = $value;
+    }
+
+    public function __isset($name)
+    {
+        return isset($this->vars[$name]);
+    }
+
+    public function __unset($name)
+    {
+        unset($this->vars[$name]);
     }
 
     public function __toString()
