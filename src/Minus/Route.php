@@ -49,7 +49,7 @@ class Route
      * @var array
      * @access protected
      */
-    protected $to;
+    protected $to = array();
 
     /**
      * Options de la route
@@ -85,9 +85,9 @@ class Route
      * @param string|array $to (optionnel) Correspondance de la route
      * @param array $options (optionnel) Options de la route
      */
-    public function __construct($path, $to = null, $options = array())
+    public function __construct($path, $to = array(), $options = array())
     {
-        if ($to === null and array_key_exists('to', $options)) {
+        if (empty($to) and array_key_exists('to', $options)) {
             $to = $options['to'];
         }
 
@@ -247,6 +247,7 @@ class Route
                 if (is_numeric($key) or empty($value)) continue;
                 $rules[$key] = $value;
             }
+
             return $this->params = $this->to() + $rules;
         }
 
