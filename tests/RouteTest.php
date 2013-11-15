@@ -1,7 +1,7 @@
 <?php
 
 require_once 'PHPUnit/Autoload.php';
-require_once dirname(__FILE__) . '/../src/Minus/Route.php';
+require_once dirname(__FILE__) . '/../src/Route.php';
 
 
 /**
@@ -26,7 +26,7 @@ class RouteTest extends PHPUnit_Framework_TestCase
      */
     public function testTo($to, $expected)
     {
-        $route = new Minus\Route('', $to);
+        $route = new minus\Route('', $to);
 
         $this->assertEquals($expected, $route->to());
     }
@@ -60,7 +60,7 @@ class RouteTest extends PHPUnit_Framework_TestCase
      */
     public function testParseHome($path, $expected)
     {
-        $route = new Minus\Route('/', 'pages#home', array('format' => false));
+        $route = new minus\Route('/', 'pages#home', array('format' => false));
 
         $result = $route->parse($path);
         $this->assertEquals($expected, $result);
@@ -88,7 +88,7 @@ class RouteTest extends PHPUnit_Framework_TestCase
      */
     public function testParse404($path, $expected)
     {
-        $route = new Minus\Route('404', 'application#error(404)');
+        $route = new minus\Route('404', 'application#error(404)');
 
         $result = $route->parse($path);
         $this->assertEquals($expected, $result);
@@ -116,7 +116,7 @@ class RouteTest extends PHPUnit_Framework_TestCase
      */
     public function testParseX($path, $expected)
     {
-        $route = new Minus\Route('/:controller(/:action(/:id))', '', array('defaults' => array('action' => 'index')));
+        $route = new minus\Route('/:controller(/:action(/:id))', '', array('defaults' => array('action' => 'index')));
 
         $result = $route->parse($path);
         $this->assertEquals($expected, $result);
@@ -149,7 +149,7 @@ class RouteTest extends PHPUnit_Framework_TestCase
      */
     public function testMatchHome($params)
     {
-        $route = new Minus\Route('/', 'pages#home', array('format' => false));
+        $route = new minus\Route('/', 'pages#home', array('format' => false));
 
         $result = $route->match($params);
         $this->assertEquals('/', $result);
@@ -176,7 +176,7 @@ class RouteTest extends PHPUnit_Framework_TestCase
      */
     public function testMatch404($params)
     {
-        $route = new Minus\Route('404', 'application#error(404)');
+        $route = new minus\Route('404', 'application#error(404)');
 
         $result = $route->match($params);
         $this->assertEquals('/404', $result);
@@ -203,7 +203,7 @@ class RouteTest extends PHPUnit_Framework_TestCase
      */
     public function testMatchX($params, $expected)
     {
-        $route = new Minus\Route('/:controller(/:action(/:id))', '', array('defaults' => array('action' => 'index')));
+        $route = new minus\Route('/:controller(/:action(/:id))', '', array('defaults' => array('action' => 'index')));
 
         $result = $route->match($params);
         $this->assertEquals($expected, $result);

@@ -1,11 +1,11 @@
 {
+    "version": "dev-master",
+
     "name": "minus/core",
     "description": "experimental stuff",
     "type": "library",
     "autoload": {
-        "psr-0": {
-            "Minus": "src/"
-        }
+        "classmap": ["src/"]
     },
     "require": {
         "php": ">=5.3.0"
