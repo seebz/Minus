@@ -19,9 +19,9 @@ abstract class Singleton
         $class = get_called_class();
         if (! array_key_exists($class, $instances))
         {
-            $instanes[$class] = new $class();
+            $instances[$class] = new $class();
         }
-        return $instanes[$class];
+        return $instances[$class];
     }
 
     protected function __construct() {}
