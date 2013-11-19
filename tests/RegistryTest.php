@@ -54,6 +54,28 @@ class RegistryTest extends PHPUnit_Framework_TestCase
 	/**
 	 * @dataProvider dataProvider
 	 */
+	public function testProperties($index, $value)
+	{
+		$class = $this->_className;
+		$instance = $class::instance();
+
+		// set
+		$instance->{$index} = $value;
+
+		// isset
+		$this->assertTrue( isset($instance->{$index}) );
+
+		// get
+		$this->assertSame( $value, $instance->{$index} );
+
+		// unset
+		unset($instance->{$index});
+		$this->assertFalse( isset($instance->{$index}) );
+	}
+
+	/**
+	 * @dataProvider dataProvider
+	 */
 	public function testArrayAccessMethods($index, $value)
 	{
 		$class = $this->_className;
@@ -93,50 +115,6 @@ class RegistryTest extends PHPUnit_Framework_TestCase
 		// unset
 		unset($instance[$index]);
 		$this->assertFalse( isset($instance[$index]) );
-	}
-
-	/**
-	 * @dataProvider dataProvider
-	 */
-	// public function testMagicMethods($index, $value)
-	// {
-	// 	$class = $this->_className;
-	// 	$instance = $class::instance();
-
-	// 	// __set()
-	// 	$instance->__set($index, $value);
-
-	// 	// __isset()
-	// 	$this->assertTrue( $instance->__isset($index) );
-
-	// 	// __get()
-	// 	$this->assertSame( $value, $instance->__get($index) );
-
-	// 	// __unset()
-	// 	$instance->__unset($index);
-	// 	$this->assertFalse( $instance->__isset($index) );
-	// }
-
-	/**
-	 * @dataProvider dataProvider
-	 */
-	public function testMagicProperties($index, $value)
-	{
-		$class = $this->_className;
-		$instance = $class::instance();
-
-		// set
-		$instance->{$index} = $value;
-
-		// isset
-		$this->assertTrue( isset($instance->{$index}) );
-
-		// get
-		$this->assertSame( $value, $instance->{$index} );
-
-		// unset
-		unset($instance->{$index});
-		$this->assertFalse( isset($instance->{$index}) );
 	}
 
 	/**
