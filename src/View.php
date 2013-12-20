@@ -53,6 +53,12 @@ class View
     protected $vars = array();
 
 
+    public static function addPath($path)
+    {
+        static::$paths[] = $path;
+    }
+
+
     /**
      * Constructeur de la classe
      *
@@ -153,7 +159,7 @@ class View
     protected function locations()
     {
         $locations = array();
-        foreach(static::$paths as $path) {
+        foreach (static::$paths as $path) {
             $locations[] = $path.'/'.$this->template.static::$extension;
         }
 

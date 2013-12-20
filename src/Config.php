@@ -24,6 +24,11 @@ class Config
     public static $items = array();
 
 
+    public static function addPath($path)
+    {
+        static::$paths[] = $path;
+    }
+
     /**
      * Chargement d'une configuration
      *
